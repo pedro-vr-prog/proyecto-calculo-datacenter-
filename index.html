@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consumo Energético en Centros de Datos — Proyecto de Aula</title>
+
+  <!-- ============================================================
+       FASE 1 — ESQUELETO HTML + TAILWIND
+       ============================================================
+       ¿Qué hay acá?
+       1. Tailwind CSS v3 desde CDN → estilos modernos sin escribir CSS.
+       2. KaTeX desde CDN → renderizar fórmulas matemáticas bonitas.
+       3. Navegación fija con scroll suave entre secciones.
+       4. Secciones mapeadas a la estructura APA 7 de la guía.
+       5. Placeholders para los simuladores 2D y 3D (fases futuras).
+       6. Tema oscuro profesional con acentos en verde/cian (energía).
+       ============================================================ -->
+
+  <!-- Tailwind CSS v3 — CDN con configuración de colores custom -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Paleta personalizada: colores "energéticos"
+            energy: {
+              50:  '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              300: '#6ee7b7',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              950: '#022c22',
+            },
+            surface: {
+              800: '#1e1e2e',  // Fondo de tarjetas
+              900: '#11111b',  // Fondo principal
+              950: '#0a0a14',  // Fondo del hero
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter (texto) + JetBrains Mono (código/datos) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- math.js — Parser de expresiones matemáticas escritas por el usuario
+       ¿Por qué math.js?
+       • Interpreta texto como "60 + 25*sin(pi*t/12)" → función evaluable en JS.
+       • Tiene soporte nativo para constantes (pi, e), funciones trig, logs, etc.
+       • Es mucho más seguro que usar eval() directamente con la entrada del usuario.
+       • Permite derivar simbólicamente (aunque nosotros haremos la antiderivada
+         analítica para la función por defecto y numérica para las personalizadas). -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/13.2.0/math.min.js"></script>
+
+  <!-- Chart.js v4 — librería de gráficas 2D (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Plugin de anotaciones: líneas, cajas y etiquetas sobre la gráfica -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+  <!-- Three.js + OrbitControls (CDN) para simulación 3D de sólidos de revolución -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- KaTeX — renderizado de fórmulas matemáticas tipo LaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+
+  <!-- Estilos personalizados modulares (css/styles.css) -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="bg-surface-900 text-gray-200 font-sans antialiased">
+
+  <!-- ============================================================
+       NAVBAR — Navegación fija superior
+       ============================================================
+       - Fija arriba (sticky) con fondo semitransparente + blur.
+       - Links con scroll suave a cada sección (class="scroll-smooth"
+         en <html>).
+       - Menú hamburguesa para móvil (toggled con JS mínimo).
+       - El logo muestra un ícono de rayo ⚡ (energía).
+       ============================================================ -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-surface-900/80 backdrop-blur-xl border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+
+        <!-- Logo + Nombre del proyecto -->
+        <a href="#hero" class="flex items-center gap-2 group">
+          <span class="text-2xl">⚡</span>
+          <span class="text-lg font-bold text-white group-hover:text-energy-400 transition-colors">
+            DataCenter <span class="text-energy-400">Energy</span>
+          </span>
+        </a>
+
+        <!-- Links de navegación — Desktop -->
+        <div class="hidden md:flex items-center gap-1">
+          <a href="#hero"          class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Inicio</a>
+          <a href="#resumen"       class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Resumen</a>
+          <a href="#marco-teorico" class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Marco Teórico</a>
+          <a href="#metodologia"   class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Metodología</a>
+          <a href="#simulador-2d"  class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">2D</a>
+          <a href="#simulador-3d"  class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">3D</a>
+          <a href="#resultados"    class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Resultados</a>
+          <a href="#conclusiones"  class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Conclusiones</a>
+          <a href="#referencias"   class="nav-link px-3 py-2 text-sm font-medium text-gray-400 hover:text-energy-400 border-b-2 border-transparent hover:border-energy-400 transition-all">Referencias</a>
+        </div>
+
+        <!-- Botón hamburguesa — Móvil -->
+        <button id="menu-toggle" class="md:hidden p-2 rounded-lg text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all" aria-label="Abrir menú">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path id="menu-icon-close" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Menú móvil desplegable -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-white/5 bg-surface-900/95 backdrop-blur-xl">
+      <div class="px-4 py-3 space-y-1">
+        <a href="#hero"          class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Inicio</a>
+        <a href="#resumen"       class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Resumen</a>
+        <a href="#marco-teorico" class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Marco Teórico</a>
+        <a href="#metodologia"   class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Metodología</a>
+        <a href="#simulador-2d"  class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Simulador 2D</a>
+        <a href="#simulador-3d"  class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Simulador 3D</a>
+        <a href="#resultados"    class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Resultados</a>
+        <a href="#conclusiones"  class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Conclusiones</a>
+        <a href="#referencias"   class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-energy-400 hover:bg-white/5 transition-all">Referencias</a>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- ============================================================
+       SECCIÓN 1: HERO / PORTADA
+       ============================================================
+       Mapeada a: 2.1 Portada (APA 7)
+       - Título del proyecto centrado con efecto glow.
+       - Datos del equipo, asignatura, docente, fecha.
+       - Badge con la opción elegida.
+       ============================================================ -->
+  <section id="hero" class="relative min-h-screen flex items-center justify-center bg-surface-950 overflow-hidden">
+    <!-- Efecto de glow de fondo -->
+    <div class="hero-glow absolute inset-0 pointer-events-none"></div>
+
+    <!-- Grid decorativo de fondo (simula servidores/rack) -->
+    <div class="absolute inset-0 opacity-[0.03]"
+         style="background-image: repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(52,211,153,0.3) 49px, rgba(52,211,153,0.3) 50px),
+                                  repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(52,211,153,0.3) 49px, rgba(52,211,153,0.3) 50px);">
+    </div>
+
+    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
+      <!-- Badge de opción -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-energy-500/10 border border-energy-500/20 text-energy-400 text-sm font-medium mb-8">
+        <span class="w-2 h-2 rounded-full bg-energy-400 animate-pulse"></span>
+        Opción 1 — Consumo Energético en Centros de Datos
+      </div>
+
+      <!-- Título principal -->
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
+        Modelado y Optimización del
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-energy-400 to-cyan-400">
+          Consumo Energético
+        </span>
+        <br>en Centros de Datos
+      </h1>
+
+      <!-- Subtítulo -->
+      <p class="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto mb-10">
+        Aplicación de integrales definidas, el Teorema Fundamental del Cálculo
+        y simulación interactiva 2D/3D para la gestión eficiente de recursos energéticos.
+      </p>
+
+      <!-- Fórmula central -->
+      <div class="inline-block bg-surface-800/60 border border-white/10 rounded-2xl px-8 py-4 mb-10">
+        <span class="text-2xl sm:text-3xl text-white">
+          $$E = \int_{a}^{b} P(t)\, dt \quad \text{[kWh]}$$
+        </span>
+      </div>
+
+      <!-- Datos del equipo -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto text-sm text-gray-500">
+        <div class="bg-surface-800/40 rounded-xl p-4 border border-white/5">
+          <p class="text-energy-400 font-semibold mb-1">Autores</p>
+          <p>Estudiante 1</p>
+          <p>Estudiante 2</p>
+          <p>Estudiante 3</p>
+        </div>
+        <div class="bg-surface-800/40 rounded-xl p-4 border border-white/5">
+          <p class="text-energy-400 font-semibold mb-1">Asignatura</p>
+          <p>Cálculo Integral</p>
+          <p class="mt-2 text-energy-400 font-semibold">Docente</p>
+          <p>Nombre del Profesor</p>
+        </div>
+        <div class="bg-surface-800/40 rounded-xl p-4 border border-white/5">
+          <p class="text-energy-400 font-semibold mb-1">Institución</p>
+          <p>Universidad Simón Bolívar</p>
+          <p>Ingeniería de Sistemas</p>
+          <p class="mt-2 text-gray-600">2026</p>
+        </div>
+      </div>
+
+      <!-- Flecha animada para bajar -->
+      <div class="mt-12 animate-bounce">
+        <a href="#resumen" class="text-energy-400/50 hover:text-energy-400 transition-colors">
+          <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 2: RESUMEN / ABSTRACT
+       ============================================================
+       Mapeada a: 2.2 Resumen y Palabras Clave (APA 7)
+       - Párrafo de 150-250 palabras describiendo el proyecto.
+       - Palabras clave al pie.
+       ============================================================ -->
+  <section id="resumen" class="py-20 lg:py-28 bg-surface-900">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Encabezado de sección (reutilizable) -->
+      <div class="text-center mb-12">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.2</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Resumen</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <!-- Abstract -->
+      <div class="bg-surface-800 rounded-2xl p-8 border border-white/5">
+        <p class="text-gray-300 leading-relaxed text-justify">
+          El presente proyecto de aula aborda el problema de la cuantificación de la energía eléctrica
+          consumida por un centro de datos a lo largo de un período de operación de 24 horas. Se modela
+          la potencia instantánea del servidor mediante la función
+          $P(t) = 60 + 25\sin\!\left(\frac{\pi t}{12}\right) + 10\sin\!\left(\frac{\pi t}{6}\right)$ kW,
+          la cual captura la carga base, el ciclo circadiano de demanda y las fluctuaciones intradiarias
+          de procesamiento. La energía total acumulada se obtiene analíticamente mediante la integral definida
+          $E = \int_{0}^{24} P(t)\,dt$ aplicando el Teorema Fundamental del Cálculo (TFC), y se valida
+          computacionalmente mediante métodos numéricos de aproximación (sumas de Riemann, regla del trapecio
+          y regla de Simpson). Se desarrolla una herramienta de simulación interactiva basada en tecnologías web
+          (HTML5, Chart.js, Three.js) que permite graficar la función de potencia en 2D con sombreado del área
+          bajo la curva, manipular dinámicamente los límites de integración, y visualizar un sólido de revolución
+          en 3D generado por la rotación de P(t) alrededor del eje temporal. Los resultados muestran una
+          concordancia exacta entre el valor analítico y la aproximación numérica, con un consumo total de
+          1440 kWh en el ciclo completo.
+        </p>
+
+        <!-- Palabras clave -->
+        <div class="mt-6 pt-6 border-t border-white/10">
+          <p class="text-sm text-gray-500">
+            <span class="font-semibold text-gray-400">Palabras clave:</span>
+            Integral definida, Teorema Fundamental del Cálculo, consumo energético, centro de datos,
+            sólido de revolución, simulación interactiva.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 3: MARCO TEÓRICO
+       ============================================================
+       Mapeada a: 2.5 Marco Teórico y Fundamentación Matemática
+       - Integral indefinida y antiderivada.
+       - Integral definida y TFC.
+       - Áreas bajo la curva.
+       - Volúmenes (sólidos de revolución).
+       ============================================================ -->
+  <section id="marco-teorico" class="py-20 lg:py-28 bg-surface-950">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.5</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Marco Teórico</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <!-- Grid de tarjetas teóricas -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Tarjeta 1: Integral Indefinida -->
+        <div class="bg-surface-800 rounded-2xl p-8 border border-white/5 hover:border-energy-500/30 transition-colors">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-energy-500/10 flex items-center justify-center text-energy-400 text-xl">∫</div>
+            <h3 class="text-xl font-bold text-white">Integral Indefinida</h3>
+          </div>
+          <p class="text-gray-400 leading-relaxed mb-4">
+            La <strong class="text-gray-200">antiderivada</strong> o integral indefinida de una función $f(x)$ es la familia de funciones
+            $F(x)$ tales que $F'(x) = f(x)$. En nuestro contexto, encontrar la antiderivada de $P(t)$
+            nos permite aplicar el TFC directamente.
+          </p>
+          <div class="bg-surface-900/60 rounded-xl p-4 text-center">
+            $$\int f(x)\,dx = F(x) + C$$
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: TFC -->
+        <div class="bg-surface-800 rounded-2xl p-8 border border-white/5 hover:border-energy-500/30 transition-colors">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-xl">📐</div>
+            <h3 class="text-xl font-bold text-white">Teorema Fundamental del Cálculo</h3>
+          </div>
+          <p class="text-gray-400 leading-relaxed mb-4">
+            Si $F$ es antiderivada de $f$ en $[a,b]$, entonces la integral definida se evalúa como
+            la diferencia $F(b) - F(a)$. Esto conecta el cálculo diferencial con el integral y
+            nos da el valor <strong class="text-gray-200">exacto</strong> del área bajo la curva.
+          </p>
+          <div class="bg-surface-900/60 rounded-xl p-4 text-center">
+            $$\int_{a}^{b} f(x)\,dx = F(b) - F(a)$$
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: Área bajo la curva -->
+        <div class="bg-surface-800 rounded-2xl p-8 border border-white/5 hover:border-energy-500/30 transition-colors">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xl">📊</div>
+            <h3 class="text-xl font-bold text-white">Áreas de Regiones Planas</h3>
+          </div>
+          <p class="text-gray-400 leading-relaxed mb-4">
+            La integral definida $\int_a^b f(x)\,dx$ representa el <strong class="text-gray-200">área neta</strong>
+            entre la curva $y = f(x)$ y el eje horizontal en el intervalo $[a, b]$. En nuestro problema,
+            esta área es la energía total consumida $E$ medida en kWh.
+          </p>
+          <div class="bg-surface-900/60 rounded-xl p-4 text-center">
+            $$E = \int_{0}^{24} P(t)\,dt \quad \text{[kWh]}$$
+          </div>
+        </div>
+
+        <!-- Tarjeta 4: Sólidos de revolución -->
+        <div class="bg-surface-800 rounded-2xl p-8 border border-white/5 hover:border-energy-500/30 transition-colors">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 text-xl">🌐</div>
+            <h3 class="text-xl font-bold text-white">Volúmenes de Sólidos</h3>
+          </div>
+          <p class="text-gray-400 leading-relaxed mb-4">
+            Al rotar la curva $y = P(t)$ alrededor del eje $t$ se genera un
+            <strong class="text-gray-200">sólido de revolución</strong> cuyo volumen se calcula por el
+            método de discos. Esta visualización 3D permite entender geométricamente cómo varía el consumo.
+          </p>
+          <div class="bg-surface-900/60 rounded-xl p-4 text-center">
+            $$V = \pi \int_{a}^{b} [P(t)]^{2}\,dt$$
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 4: METODOLOGÍA
+       ============================================================
+       Mapeada a: 2.6 Metodología y Desarrollo
+       - Pasos del trabajo: geometrización, análisis, verificación.
+       - Acá irá el input del usuario para definir P(t) (Fase 2).
+       ============================================================ -->
+  <section id="metodologia" class="py-20 lg:py-28 bg-surface-900">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.6</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Metodología</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <!-- Timeline de pasos metodológicos -->
+      <div class="relative max-w-3xl mx-auto">
+        <!-- Línea vertical -->
+        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-energy-500 via-cyan-500 to-violet-500"></div>
+
+        <!-- Paso 1 -->
+        <div class="relative flex items-start gap-6 mb-10">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-energy-500 flex items-center justify-center text-white font-bold text-lg z-10">1</div>
+          <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex-1">
+            <h3 class="text-lg font-bold text-white mb-2">Definición de la Función de Potencia</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se define $P(t) = 60 + 25\sin(\pi t/12) + 10\sin(\pi t/6)$ kW como modelo realista
+              del consumo de un centro de datos. El usuario puede modificar esta función en la herramienta interactiva.
+            </p>
+          </div>
+        </div>
+
+        <!-- Paso 2 -->
+        <div class="relative flex items-start gap-6 mb-10">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-cyan-500 flex items-center justify-center text-white font-bold text-lg z-10">2</div>
+          <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex-1">
+            <h3 class="text-lg font-bold text-white mb-2">Desarrollo Analítico (TFC)</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se halla la antiderivada $F(t) = 60t - \frac{300}{\pi}\cos(\pi t/12) - \frac{60}{\pi}\cos(\pi t/6)$
+              y se evalúa $E = F(b) - F(a)$ para obtener el resultado exacto de la energía acumulada.
+            </p>
+          </div>
+        </div>
+
+        <!-- Paso 3 -->
+        <div class="relative flex items-start gap-6 mb-10">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-lg z-10">3</div>
+          <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex-1">
+            <h3 class="text-lg font-bold text-white mb-2">Validación Numérica</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se compara el valor analítico contra tres métodos numéricos: sumas de Riemann (rectángulos),
+              regla del trapecio y regla de Simpson, calculando el error porcentual de cada uno.
+            </p>
+          </div>
+        </div>
+
+        <!-- Paso 4 -->
+        <div class="relative flex items-start gap-6">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold text-lg z-10">4</div>
+          <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex-1">
+            <h3 class="text-lg font-bold text-white mb-2">Visualización Interactiva 2D y 3D</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se construye un simulador web que grafica $P(t)$ con área sombreada en 2D (Chart.js)
+              y genera el sólido de revolución en 3D (Three.js), permitiendo manipular los parámetros en tiempo real.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           PANEL DE CONTROL — FASE 2 ✅
+           ============================================================
+           Componentes:
+           ① Input de texto para P(t) — parseado con math.js
+           ② Sliders + inputs numéricos para los límites a y b
+           ③ Selector del número de subdivisiones n (para métodos numéricos)
+           ④ Botón "Calcular" que dispara todo el motor matemático
+           ⑤ Zona de feedback: errores de sintaxis en rojo
+           ============================================================ -->
+      <div class="mt-16 max-w-4xl mx-auto" id="panel-control">
+
+        <!-- Cabecera del panel -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-lg bg-energy-500/10 flex items-center justify-center text-energy-400 text-xl">⚙️</div>
+          <div>
+            <h3 class="text-xl font-bold text-white">Panel de Control del Simulador</h3>
+            <p class="text-gray-500 text-sm">Define P(t), ajusta el intervalo [a, b] y el número de subdivisiones</p>
+          </div>
+          <span class="ml-auto px-3 py-1 rounded-full bg-energy-500/10 text-energy-400 text-xs font-semibold">✅ Fase 2</span>
+        </div>
+
+        <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden">
+
+          <!-- ⓪ SELECTOR DE FUENTE DE DATOS (FASE 1) -->
+          <div class="p-6 border-b border-white/5 bg-surface-900/30">
+            <label class="block text-sm font-semibold text-gray-300 mb-3">
+              Fuente para el cálculo principal de energía
+            </label>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button id="btn-fuente-analitico" onclick="setFuenteDatos('analitico')"
+                class="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-energy-500/20 text-energy-400 border border-energy-500/40 transition-all">
+                📐 Modelo analítico P(t)
+              </button>
+              <button id="btn-fuente-datos" onclick="setFuenteDatos('datos')"
+                class="flex-1 py-2.5 px-4 rounded-xl text-sm font-semibold bg-surface-900 text-gray-400 border border-white/10 hover:text-white transition-all">
+                📡 Datos medidos (Telemetría)
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              La ecuación analítica $P(t)$ siempre se mantiene activa como modelo de referencia para evaluar el ajuste contra los datos medidos.
+            </p>
+          </div>
+
+          <!-- ① INPUT DE LA FUNCIÓN P_TI(t) -->
+          <div class="p-6 border-b border-white/5">
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Potencia de Carga TI <span class="text-cyan-400 font-mono">P_TI(t) [kW]</span>
+              <span class="ml-2 text-xs text-gray-500 font-normal">— usa <code class="bg-white/5 px-1 rounded">sin</code>, <code class="bg-white/5 px-1 rounded">cos</code>, <code class="bg-white/5 px-1 rounded">pi</code>, <code class="bg-white/5 px-1 rounded">^</code>, <code class="bg-white/5 px-1 rounded">sqrt</code></span>
+            </label>
+            <div class="flex gap-3">
+              <!-- El input de texto donde el usuario escribe la función -->
+              <input
+                id="input-funcion"
+                type="text"
+                value="60 + 25*sin(pi*t/12) + 10*sin(pi*t/6)"
+                class="flex-1 bg-surface-900 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm
+                       focus:outline-none focus:border-energy-500 focus:ring-1 focus:ring-energy-500/50
+                       placeholder-gray-600 transition-colors"
+                placeholder="Ej: 60 + 25*sin(pi*t/12)"
+                autocomplete="off" spellcheck="false"
+              >
+              <!-- Preview de la función parseada -->
+              <div id="funcion-status" class="flex-shrink-0 w-10 h-12 flex items-center justify-center rounded-xl bg-energy-500/10 text-energy-400 text-xl" title="Función válida">✓</div>
+            </div>
+            <!-- Mensaje de error de sintaxis (oculto por defecto) -->
+            <p id="funcion-error" class="hidden mt-2 text-xs text-red-400 font-mono bg-red-500/5 border border-red-500/20 rounded-lg px-3 py-2"></p>
+            <!-- Sugerencias de funciones predefinidas -->
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="text-xs text-gray-600 self-center">Presets:</span>
+              <button onclick="setPreset('60 + 25*sin(pi*t/12) + 10*sin(pi*t/6)')"
+                class="preset-btn px-2 py-1 rounded-lg bg-white/5 hover:bg-energy-500/10 text-xs text-gray-400 hover:text-energy-400 font-mono transition-colors">
+                P₁ Bicircadiana
+              </button>
+              <button onclick="setPreset('50 + 30*sin(pi*t/12)')"
+                class="preset-btn px-2 py-1 rounded-lg bg-white/5 hover:bg-energy-500/10 text-xs text-gray-400 hover:text-energy-400 font-mono transition-colors">
+                P₂ Circadiana simple
+              </button>
+              <button onclick="setPreset('80 - 20*cos(pi*t/12) + 5*sin(pi*t/3)')"
+                class="preset-btn px-2 py-1 rounded-lg bg-white/5 hover:bg-energy-500/10 text-xs text-gray-400 hover:text-energy-400 font-mono transition-colors">
+                P₃ Alta carga
+              </button>
+              <button onclick="setPreset('40 + 10*t - 0.4*t^2')"
+                class="preset-btn px-2 py-1 rounded-lg bg-white/5 hover:bg-energy-500/10 text-xs text-gray-400 hover:text-energy-400 font-mono transition-colors">
+                P₄ Polinomial
+              </button>
+            </div>
+          </div>
+
+          <!-- ①C VARIABLE TEMPERATURA T(t) Y ENFRIAMIENTO (FASE 2) -->
+          <div class="p-6 border-b border-white/5 bg-orange-500/[0.03]">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 class="text-sm font-semibold text-gray-200">
+                  Variable Térmica <span class="text-orange-400 font-mono">T(t) [°C]</span> y Enfriamiento
+                </h4>
+                <p class="text-xs text-gray-500">
+                  $P_{\text{total}}(t) = P_{\text{TI}}(t) + P_{\text{enfriamiento}}(t)$ con $P_{\text{enfriamiento}}(t) = c_0 + c_1 \cdot (T(t) - T_{\text{ref}})$
+                </p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-400 text-xs font-mono">PUE &amp; Térmico</span>
+            </div>
+
+            <!-- Input de T(t) -->
+            <div class="flex gap-3 mb-2">
+              <input
+                id="input-temp"
+                type="text"
+                value="24 + 6*sin(pi*(t - 9)/12)"
+                class="flex-1 bg-surface-900 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono text-sm
+                       focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/50 transition-colors"
+                placeholder="Ej: 24 + 6*sin(pi*(t - 9)/12)"
+                autocomplete="off" spellcheck="false"
+              >
+              <div id="temp-status" class="flex-shrink-0 w-10 h-11 flex items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 text-xl" title="Temperatura válida">✓</div>
+            </div>
+            <p id="temp-error" class="hidden mb-2 text-xs text-red-400 font-mono bg-red-500/5 border border-red-500/20 rounded-lg px-3 py-2"></p>
+
+            <!-- Presets de temperatura -->
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span class="text-xs text-gray-600 self-center">Presets T(t):</span>
+              <button onclick="setTempPreset('24 + 6*sin(pi*(t - 9)/12)')"
+                class="px-2 py-1 rounded-lg bg-white/5 hover:bg-orange-500/10 text-xs text-gray-400 hover:text-orange-400 font-mono transition-colors">
+                T₁ Estándar (18–30 °C)
+              </button>
+              <button onclick="setTempPreset('29 + 7*sin(pi*(t - 9)/12)')"
+                class="px-2 py-1 rounded-lg bg-white/5 hover:bg-orange-500/10 text-xs text-gray-400 hover:text-orange-400 font-mono transition-colors">
+                T₂ Día caluroso (22–36 °C)
+              </button>
+              <button onclick="setTempPreset('19 + 4*sin(pi*(t - 9)/12)')"
+                class="px-2 py-1 rounded-lg bg-white/5 hover:bg-orange-500/10 text-xs text-gray-400 hover:text-orange-400 font-mono transition-colors">
+                T₃ Clima fresco (15–23 °C)
+              </button>
+            </div>
+
+            <!-- Parámetros editables c0, c1, T_ref -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+                <label class="block text-xs text-gray-400 mb-1 font-mono">c₀ base enfriamiento (kW)</label>
+                <input id="input-c0" type="number" step="0.5" min="0" value="12"
+                  class="w-full bg-surface-950 border border-white/10 rounded-lg px-3 py-1.5 text-white font-mono text-sm focus:outline-none focus:border-violet-500"
+                  onchange="calcularTodo()">
+              </div>
+              <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+                <label class="block text-xs text-gray-400 mb-1 font-mono">c₁ factor térmico (kW/°C)</label>
+                <input id="input-c1" type="number" step="0.1" min="0" value="1.8"
+                  class="w-full bg-surface-950 border border-white/10 rounded-lg px-3 py-1.5 text-white font-mono text-sm focus:outline-none focus:border-violet-500"
+                  onchange="calcularTodo()">
+              </div>
+              <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+                <label class="block text-xs text-gray-400 mb-1 font-mono">T_ref setpoint (°C)</label>
+                <input id="input-tref" type="number" step="0.5" min="10" max="35" value="20"
+                  class="w-full bg-surface-950 border border-white/10 rounded-lg px-3 py-1.5 text-white font-mono text-sm focus:outline-none focus:border-violet-500"
+                  onchange="calcularTodo()">
+              </div>
+            </div>
+          </div>
+
+          <!-- ①B TELEMETRÍA: DATOS MEDIDOS (HORA VS kW) -->
+          <div class="p-6 border-b border-white/5 bg-surface-900/20">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div>
+                <h4 class="text-sm font-semibold text-gray-200">
+                  Datos de Telemetría <span class="text-amber-400 font-mono">(Hora vs. kW)</span>
+                </h4>
+                <p class="text-xs text-gray-500">Carga lecturas reales por hora o cada 30 min, pega tus datos o sube un archivo CSV.</p>
+              </div>
+              <span id="telemetria-count" class="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-mono">25 lecturas</span>
+            </div>
+
+            <!-- Botonera de carga de datos -->
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <div class="flex rounded-lg overflow-hidden border border-white/10">
+                <button id="btn-res-1h" onclick="cargarEjemploTelemetria(1)"
+                  class="px-3 py-1.5 text-xs font-mono bg-amber-500/20 text-amber-400 border-r border-white/10">
+                  Ejemplo 1h
+                </button>
+                <button id="btn-res-30m" onclick="cargarEjemploTelemetria(0.5)"
+                  class="px-3 py-1.5 text-xs font-mono bg-white/5 text-gray-400 hover:text-white">
+                  Ejemplo 30 min
+                </button>
+              </div>
+
+              <button onclick="togglePanelPegarDatos()"
+                class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 font-mono transition-colors">
+                📋 Pegar datos propios
+              </button>
+
+              <label class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 font-mono cursor-pointer transition-colors">
+                📁 Subir CSV
+                <input id="input-csv-file" type="file" accept=".csv,.txt" class="hidden">
+              </label>
+            </div>
+
+            <!-- Mensajes de estado o error -->
+            <p id="telemetria-error" class="hidden mb-3 text-xs text-red-400 font-mono bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2"></p>
+            <p id="telemetria-status" class="hidden mb-3 text-xs text-energy-400 font-mono bg-energy-500/10 border border-energy-500/20 rounded-lg px-3 py-2"></p>
+
+            <!-- Panel colapsable para pegar datos -->
+            <div id="panel-pegar-csv" class="hidden mb-4 p-4 rounded-xl bg-surface-900 border border-white/10">
+              <p class="text-xs text-gray-400 mb-2">Pega columnas <code class="text-amber-400">hora, kw</code> (una lectura por línea, separada por coma, punto y coma o tabulador):</p>
+              <textarea id="textarea-csv" rows="5"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg p-3 text-xs font-mono text-gray-200 focus:outline-none focus:border-amber-500"
+                placeholder="hora,kw&#10;0,61.2&#10;1,66.8&#10;2,74.5"></textarea>
+              <div class="mt-2 flex justify-end">
+                <button onclick="aplicarDatosPegados()"
+                  class="px-4 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors">
+                  Aplicar datos pegados
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabla compacta con scroll de lecturas -->
+            <div class="max-h-48 overflow-y-auto rounded-xl border border-white/5 bg-surface-900/60">
+              <table class="w-full text-xs">
+                <thead class="sticky top-0 bg-surface-900 border-b border-white/10 text-gray-400">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-semibold">Hora (t)</th>
+                    <th class="px-4 py-2 text-right font-semibold">P_TI med (kW)</th>
+                    <th class="px-4 py-2 text-right font-semibold">Temp (°C)</th>
+                    <th class="px-4 py-2 text-right font-semibold">P_enf (kW)</th>
+                    <th class="px-4 py-2 text-right font-semibold">P_TI mod</th>
+                    <th class="px-4 py-2 text-right font-semibold">|ΔP_TI|</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-telemetria">
+                  <tr><td colspan="6" class="px-4 py-3 text-center text-gray-500">Cargando telemetría...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ② LÍMITES DE INTEGRACIÓN a y b -->
+          <div class="p-6 border-b border-white/5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <span class="text-xs text-gray-400">Intervalos de análisis rápido (para observar errores numéricos en tramos parciales):</span>
+              <div class="flex gap-2">
+                <button onclick="setIntervaloRapido(0, 6)" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-cyan-500/15 text-xs font-mono text-gray-300 hover:text-cyan-300 border border-white/10 transition-colors">[0, 6] h</button>
+                <button onclick="setIntervaloRapido(8, 18)" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-cyan-500/15 text-xs font-mono text-gray-300 hover:text-cyan-300 border border-white/10 transition-colors">[8, 18] h</button>
+                <button onclick="setIntervaloRapido(0, 24)" class="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-cyan-500/15 text-xs font-mono text-gray-300 hover:text-cyan-300 border border-white/10 transition-colors">[0, 24] h</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+              <!-- Límite inferior a -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  Límite inferior <span class="text-cyan-400 font-mono">a</span>
+                  <span class="text-gray-500 font-normal ml-1">(horas)</span>
+                </label>
+                <div class="flex items-center gap-3">
+                  <input id="slider-a" type="range" min="0" max="23" step="0.5" value="8"
+                    class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-cyan-400"
+                    oninput="syncInput('slider-a','input-a')">
+                  <input id="input-a" type="number" min="0" max="23" step="0.5" value="8"
+                    class="w-20 bg-surface-900 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm text-center focus:outline-none focus:border-cyan-500 transition-colors"
+                    oninput="syncSlider('input-a','slider-a')">
+                </div>
+              </div>
+
+              <!-- Límite superior b -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  Límite superior <span class="text-pink-400 font-mono">b</span>
+                  <span class="text-gray-500 font-normal ml-1">(horas)</span>
+                </label>
+                <div class="flex items-center gap-3">
+                  <input id="slider-b" type="range" min="1" max="24" step="0.5" value="18"
+                    class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-pink-400"
+                    oninput="syncInput('slider-b','input-b')">
+                  <input id="input-b" type="number" min="1" max="24" step="0.5" value="18"
+                    class="w-20 bg-surface-900 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm text-center focus:outline-none focus:border-pink-500 transition-colors"
+                    oninput="syncSlider('input-b','slider-b')">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ NÚMERO DE SUBDIVISIONES n -->
+          <div class="p-6 border-b border-white/5">
+            <label class="block text-sm font-semibold text-gray-300 mb-2">
+              Número de subdivisiones <span class="text-violet-400 font-mono">n</span>
+              <span class="text-gray-500 font-normal ml-1">— para métodos numéricos</span>
+            </label>
+            <div class="flex items-center gap-3">
+              <input id="slider-n" type="range" min="2" max="1000" step="2" value="20"
+                class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-violet-400"
+                oninput="syncInput('slider-n','input-n')">
+              <input id="input-n" type="number" min="2" max="1000" step="2" value="20"
+                class="w-24 bg-surface-900 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-sm text-center focus:outline-none focus:border-violet-500 transition-colors"
+                oninput="syncSlider('input-n','slider-n')">
+            </div>
+            <!-- Hint de convergencia -->
+            <p class="mt-2 text-xs text-gray-600">
+              💡 Con n = 20 en intervalos parciales (como [8, 18]) se observa claramente el error de Riemann frente a Trapecio y Simpson. Sube n a 100+ para ver la convergencia.
+            </p>
+          </div>
+
+          <!-- ④ BOTÓN CALCULAR Y EXPRESIÓN KATEX -->
+          <div class="p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <button id="btn-calcular"
+                onclick="calcularTodo()"
+                class="px-8 py-3 rounded-xl bg-gradient-to-r from-energy-500 to-cyan-500
+                       text-white font-bold text-sm shadow-lg shadow-energy-500/20
+                       hover:from-energy-400 hover:to-cyan-400 hover:shadow-energy-500/40
+                       active:scale-95 transition-all duration-150 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Calcular integrales
+              </button>
+
+              <!-- Resultado rápido inline -->
+              <div id="resultado-rapido" class="hidden flex items-center gap-3 bg-energy-500/10 border border-energy-500/20 rounded-xl px-5 py-3">
+                <span class="text-energy-400 text-xl">⚡</span>
+                <div>
+                  <p id="resultado-fuente-label" class="text-xs text-gray-400">Energía acumulada (TFC analítico)</p>
+                  <p id="resultado-tfc" class="text-xl font-black text-white font-mono">— kWh</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Expresión de la integral renderizada dinámicamente con KaTeX -->
+            <div class="bg-surface-900/70 border border-white/10 rounded-xl px-4 py-3 text-center">
+              <p class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Formulación de la Integral Definida</p>
+              <div id="integral-katex" class="text-white overflow-x-auto"></div>
+            </div>
+
+            <!-- Desarrollo paso a paso de la antiderivada y TFC (FASE 2) -->
+            <div class="bg-surface-900/70 border border-energy-500/20 rounded-xl px-4 py-4">
+              <p class="text-[11px] uppercase tracking-wider text-energy-400 font-semibold mb-2 text-center">Desarrollo Analítico Paso a Paso (Antiderivada y TFC)</p>
+              <div id="antiderivada-pasos-katex" class="text-white overflow-x-auto text-sm"></div>
+            </div>
+          </div>
+
+        </div><!-- /bg-surface-800 -->
+      </div><!-- /panel-control -->
+
+      <!-- ============================================================
+           PANEL DE ESCENARIOS DE FALLA Y SOLUCIONES — FASE 3
+           ============================================================ -->
+      <div class="mt-12 max-w-4xl mx-auto" id="panel-fallas">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 text-xl">🚨</div>
+          <div>
+            <h3 class="text-xl font-bold text-white">Escenarios de Falla y Mitigación Cuantificada</h3>
+            <p class="text-gray-500 text-sm">Simula eventos críticos en $[t_1, t_2]$, evalúa $\Delta E$ por integral definida y aplica soluciones</p>
+          </div>
+          <span class="ml-auto px-3 py-1 rounded-full bg-red-500/10 text-red-400 text-xs font-semibold">Fallas &amp; Soluciones</span>
+        </div>
+
+        <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden p-6 space-y-6">
+          <!-- Selector de tipo de falla -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Selecciona un escenario de falla</label>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <button id="btn-falla-ninguna" onclick="setTipoFalla('ninguna')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold bg-energy-500/20 text-energy-400 border border-energy-500/40 transition-all">
+                ✓ Normal
+              </button>
+              <button id="btn-falla-refrigeracion" onclick="setTipoFalla('refrigeracion')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-900 text-gray-400 border border-white/10 hover:text-white transition-all">
+                ❄ Falla A/C
+              </button>
+              <button id="btn-falla-pico_trafico" onclick="setTipoFalla('pico_trafico')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-900 text-gray-400 border border-white/10 hover:text-white transition-all">
+                📈 Pico Tráfico
+              </button>
+              <button id="btn-falla-corte_energia" onclick="setTipoFalla('corte_energia')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-900 text-gray-400 border border-white/10 hover:text-white transition-all">
+                🔋 Corte UPS/Gen
+              </button>
+              <button id="btn-falla-throttling" onclick="setTipoFalla('throttling')"
+                class="px-3 py-2 rounded-xl text-xs font-semibold bg-surface-900 text-gray-400 border border-white/10 hover:text-white transition-all">
+                🔥 Throttling
+              </button>
+            </div>
+            <p id="falla-descripcion" class="mt-3 text-xs text-gray-400 bg-surface-900/60 rounded-xl p-3 border border-white/5">
+              El centro de datos opera bajo condiciones nominales sin anomalías.
+            </p>
+          </div>
+
+          <!-- Intervalo [t1, t2] y umbrales / emisiones editables -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+              <label class="block text-[11px] text-gray-400 mb-1 font-mono">Inicio falla t₁ (h)</label>
+              <input id="input-falla-t1" type="number" min="0" max="23" step="0.5" value="11"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-sm"
+                onchange="calcularTodo()">
+            </div>
+            <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+              <label class="block text-[11px] text-gray-400 mb-1 font-mono">Fin falla t₂ (h)</label>
+              <input id="input-falla-t2" type="number" min="1" max="24" step="0.5" value="16"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-sm"
+                onchange="calcularTodo()">
+            </div>
+            <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+              <label class="block text-[11px] text-gray-400 mb-1 font-mono">Cap. contratada (kW)</label>
+              <input id="input-capacidad" type="number" min="50" max="300" step="5" value="110"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-sm"
+                onchange="calcularTodo()">
+            </div>
+            <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5">
+              <label class="block text-[11px] text-gray-400 mb-1 font-mono">Umbral T (°C)</label>
+              <input id="input-temp-umbral" type="number" min="18" max="45" step="0.5" value="28"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-sm"
+                onchange="calcularTodo()">
+            </div>
+            <div class="bg-surface-900/70 rounded-xl p-3 border border-white/5 col-span-2 sm:col-span-1">
+              <label class="block text-[11px] text-gray-400 mb-1 font-mono">Factor CO₂ (kg/kWh)</label>
+              <input id="input-factor-co2" type="number" min="0.01" max="1.5" step="0.01" value="0.164"
+                class="w-full bg-surface-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white font-mono text-sm"
+                onchange="calcularTodo()">
+            </div>
+          </div>
+
+          <!-- Caja de alertas dinámicas -->
+          <div id="falla-alertas" class="p-4 rounded-xl bg-energy-500/10 border border-energy-500/25 text-energy-300 text-xs font-mono">
+            ✓ Sistema dentro de umbrales seguros.
+          </div>
+
+          <!-- Cuantificación de la falla (ΔE y Costo extra) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-surface-900/70 rounded-xl p-4 border border-white/5">
+              <p class="text-[11px] text-gray-400 uppercase">Energía ΔE en [t₁, t₂]</p>
+              <p id="falla-delta-e" class="text-xl font-black text-red-400 font-mono mt-1">0,00 kWh</p>
+            </div>
+            <div class="bg-surface-900/70 rounded-xl p-4 border border-white/5">
+              <p class="text-[11px] text-gray-400 uppercase">Impacto Económico Extra</p>
+              <p id="falla-costo-extra" class="text-xl font-black text-amber-400 font-mono mt-1">$0 COP</p>
+            </div>
+          </div>
+
+          <div class="bg-surface-900/60 border border-white/10 rounded-xl px-4 py-3 text-center">
+            <p class="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Integral del Evento de Falla en [t₁, t₂]</p>
+            <div id="falla-delta-katex" class="text-white overflow-x-auto text-sm"></div>
+          </div>
+
+          <!-- Tarjeta "Cómo solucionarlo" -->
+          <div id="tarjeta-solucion" class="bg-gradient-to-br from-surface-900 to-surface-950 rounded-2xl p-6 border border-lime-500/25 transition-opacity">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <span class="text-[11px] uppercase tracking-widest text-lime-400 font-bold">Cómo solucionarlo</span>
+                <h4 id="solucion-titulo" class="text-lg font-bold text-white mt-0.5">Mantenimiento preventivo estándar</h4>
+              </div>
+              <button id="btn-aplicar-solucion" onclick="toggleSolucionFalla()"
+                class="w-full sm:w-auto px-4 py-2 rounded-xl bg-white/5 hover:bg-lime-500/15 text-gray-200 hover:text-lime-300 border border-white/15 text-xs font-bold transition-all">
+                🛠 Simular Solución en Gráfica 2D
+              </button>
+            </div>
+
+            <p id="solucion-desc" class="text-xs text-gray-400 leading-relaxed mb-5">
+              Monitoreo continuo de PUE, temperatura y balanceo de cargas.
+            </p>
+
+            <!-- Comparación Antes vs Después y Ahorros -->
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div class="bg-surface-800/60 rounded-xl p-3 border border-white/5">
+                <p class="text-[10px] text-gray-400 uppercase">Antes (Con falla)</p>
+                <p id="solucion-antes" class="text-sm font-bold text-red-400 font-mono mt-1">— kWh</p>
+              </div>
+              <div class="bg-surface-800/60 rounded-xl p-3 border border-white/5">
+                <p class="text-[10px] text-gray-400 uppercase">Después (Solución)</p>
+                <p id="solucion-despues" class="text-sm font-bold text-lime-400 font-mono mt-1">— kWh</p>
+              </div>
+              <div class="bg-surface-800/60 rounded-xl p-3 border border-lime-500/20">
+                <p class="text-[10px] text-gray-400 uppercase">Ahorro Energía</p>
+                <p id="solucion-ahorro-kwh" class="text-sm font-bold text-energy-400 font-mono mt-1">0,00 kWh</p>
+              </div>
+              <div class="bg-surface-800/60 rounded-xl p-3 border border-lime-500/20">
+                <p class="text-[10px] text-gray-400 uppercase">Ahorro Costo</p>
+                <p id="solucion-ahorro-cop" class="text-sm font-bold text-amber-300 font-mono mt-1">$0 COP</p>
+              </div>
+              <div class="bg-surface-800/60 rounded-xl p-3 border border-lime-500/20 col-span-2 sm:col-span-1">
+                <p class="text-[10px] text-gray-400 uppercase">Ahorro CO₂</p>
+                <p id="solucion-ahorro-co2" class="text-sm font-bold text-cyan-300 font-mono mt-1">0,00 kg CO₂</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /panel-fallas -->
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 5: SIMULADOR 2D
+       ============================================================
+       Mapeada a: Propuesta de Simulador (2D) de la Opción 1
+       - Canvas para Chart.js (Fase 3).
+       - Placeholder con aspecto de dashboard.
+       ============================================================ -->
+  <section id="simulador-2d" class="py-20 lg:py-28 bg-surface-950">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Simulación Interactiva</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Simulador 2D — Energía Acumulada</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+        <p class="text-gray-400 mt-4 max-w-2xl mx-auto">
+          Gráfica interactiva de $P(t)$ con el área sombreada bajo la curva que representa
+          la energía acumulada $E = \int_a^b P(t)\,dt$.
+        </p>
+      </div>
+
+      <!-- ============================================================
+           SIMULADOR 2D COMPLETO — FASE 3 ✅
+           ============================================================
+           Estructura:
+           [A] Barra de controles rápidos (modo Riemann, toggle área)
+           [B] Canvas de Chart.js — la gráfica principal
+           [C] Leyenda explicativa con colores
+           ============================================================ -->
+      <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden">
+
+        <!-- Barra superior del panel (estilo editor) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-white/5">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-energy-500"></div>
+            <span class="ml-2 text-sm text-gray-500 font-mono">chart-2d.panel</span>
+          </div>
+
+          <!-- [A] Controles rápidos del gráfico -->
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Selector de modo de visualización Riemann -->
+            <span class="text-xs text-gray-500">Riemann:</span>
+            <div class="flex rounded-lg overflow-hidden border border-white/10 text-xs font-mono">
+              <button id="btn-modo-izq"  onclick="setModoRiemann('izq')"
+                class="modo-riemann px-3 py-1.5 bg-sky-500/20 text-sky-400 border-r border-white/10 hover:bg-sky-500/30 transition-colors">Izq</button>
+              <button id="btn-modo-der"  onclick="setModoRiemann('der')"
+                class="modo-riemann px-3 py-1.5 bg-white/5 text-gray-400 border-r border-white/10 hover:bg-white/10 transition-colors">Der</button>
+              <button id="btn-modo-med"  onclick="setModoRiemann('med')"
+                class="modo-riemann px-3 py-1.5 bg-white/5 text-gray-400 border-r border-white/10 hover:bg-white/10 transition-colors">Med</button>
+              <button id="btn-modo-off"  onclick="setModoRiemann('off')"
+                class="modo-riemann px-3 py-1.5 bg-white/5 text-gray-400 hover:bg-white/10 transition-colors">Off</button>
+            </div>
+
+            <!-- Toggle área sombreada -->
+            <button id="btn-toggle-area" onclick="toggleArea()"
+              class="px-3 py-1.5 rounded-lg border border-energy-500/30 bg-energy-500/10 text-energy-400 text-xs font-mono hover:bg-energy-500/20 transition-colors">
+              🟩 Área ON
+            </button>
+
+            <!-- Badge de fase -->
+            <span class="px-3 py-1 rounded-full bg-energy-500/10 text-energy-400 text-xs font-semibold">✅ Fase 3</span>
+          </div>
+        </div>
+
+        <!-- [B] Canvas de Chart.js -->
+        <div class="relative bg-surface-900/60 p-4">
+          <canvas id="chart-2d" style="max-height: 450px;"></canvas>
+        </div>
+
+        <!-- [C] Leyenda explicativa -->
+        <div class="px-6 py-4 border-t border-white/5 flex flex-wrap gap-4 text-xs text-gray-400">
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-energy-500/25 border border-energy-400 inline-block"></span>
+            <span><span class="font-mono text-energy-400">P_total(t)</span> y su área</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-cyan-500/25 border border-cyan-400 inline-block"></span>
+            <span><span class="font-mono text-cyan-400">P_TI(t)</span> y su área</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-violet-500/25 border border-violet-400 inline-block"></span>
+            <span><span class="font-mono text-violet-400">P_enfriamiento(t)</span> y su área</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-orange-500/20 border border-orange-400 border-dashed inline-block"></span>
+            <span><span class="font-mono text-orange-400">T(t) [°C]</span> (2.º eje der.)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-sky-500/30 border border-sky-500/50 inline-block"></span>
+            <span>Riemann</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+            <span>Telemetría <span class="font-mono text-amber-400">(P_total)</span></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-red-500/25 border border-red-500 inline-block"></span>
+            <span class="font-mono text-red-400">P_falla(t)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-4 h-4 rounded-sm bg-lime-500/25 border border-lime-400 border-dashed inline-block"></span>
+            <span class="font-mono text-lime-400">Con solución</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-0.5 h-4 bg-cyan-400 inline-block"></span>
+            <span class="font-mono text-cyan-400">a</span>
+            <span class="w-0.5 h-4 bg-pink-400 inline-block ml-1"></span>
+            <span class="font-mono text-pink-400">b</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 6: SIMULADOR 3D — SÓLIDO DE REVOLUCIÓN (THREE.JS)
+       ============================================================
+       Mapeada a: Extensión 3D — Sólido de revolución (Método de Discos)
+       V = \pi \int_a^b [P(t)]^2 dt
+       ============================================================ -->
+  <section id="simulador-3d" class="py-20 lg:py-28 bg-surface-900">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Visualización Tridimensional</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Simulador 3D — Sólido de Revolución</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+        <p class="text-gray-400 mt-4 max-w-2xl mx-auto">
+          Rotación continua de la curva $P(t)$ alrededor del eje temporal.
+          El volumen se calcula mediante el método de los discos:
+          $V = \pi\int_a^b [P(t)]^2\,dt$.
+        </p>
+      </div>
+
+      <!-- Contenedor del visor 3D interactivo -->
+      <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
+        <!-- Barra de herramientas superior -->
+        <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-white/5 bg-surface-900/50">
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-energy-500"></div>
+            <span class="ml-2 text-sm text-gray-400 font-mono">three-3d.viewport</span>
+          </div>
+
+          <!-- Controles interactivos del entorno 3D -->
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Indicador de volumen calculado -->
+            <div class="flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 px-3 py-1.5 rounded-xl">
+              <span class="text-xs text-gray-400">Volumen V:</span>
+              <span id="kpi-volumen-3d" class="font-mono text-xs font-bold text-violet-400">— u³</span>
+            </div>
+
+            <!-- Botón de rotación continua -->
+            <button id="btn-3d-rotar" onclick="toggleAutoRotar()"
+              class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-energy-400 font-mono hover:bg-white/10 transition-colors">
+              ⏸ Pausar Giro
+            </button>
+
+            <!-- Botón de estructura de malla (wireframe) -->
+            <button id="btn-3d-wireframe" onclick="toggleWireframe()"
+              class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-energy-400 font-mono hover:bg-white/10 transition-colors">
+              🕸 Malla ON
+            </button>
+
+            <!-- Slider de ángulo de revolución para ver la formación del sólido -->
+            <div class="flex items-center gap-2 bg-surface-900 px-3 py-1.5 rounded-xl border border-white/10">
+              <span class="text-xs text-gray-400 font-mono">Barrido:</span>
+              <input id="slider-3d-angulo" type="range" min="30" max="360" step="15" value="360"
+                class="w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-violet-400"
+                oninput="cambiarAnguloRevolucion(this.value)">
+              <span id="label-3d-angulo" class="text-xs text-violet-400 font-mono w-9">360°</span>
+            </div>
+
+            <!-- Botón de centrado de cámara -->
+            <button onclick="resetCamara3D()"
+              class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-xs text-gray-300 font-mono hover:bg-white/10 transition-colors"
+              title="Restablecer posición de cámara">
+              🎯 Centrar
+            </button>
+          </div>
+        </div>
+
+        <!-- Lienzo WebGL (Three.js) -->
+        <div id="container-3d" class="relative h-[440px] sm:h-[500px] w-full bg-[#0e0e1a] overflow-hidden cursor-grab active:cursor-grabbing">
+          <!-- Canvas inyectado dinámicamente por three-3d.js -->
+        </div>
+
+        <!-- Pie de navegación tridimensional -->
+        <div class="px-6 py-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-400 bg-surface-900/40">
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-energy-500 inline-block"></span> Manto Sólido</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-sky-400 inline-block"></span> Eje Temporal t</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-300 inline-block"></span> Partición de Discos</span>
+          </div>
+          <span class="text-gray-500 font-mono">🖱 Clic izq: orbitar · Rueda: zoom · Clic der: mover</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 7: RESULTADOS Y DISCUSIÓN
+       ============================================================
+       Mapeada a: 2.7 Resultados y Discusión (APA 7)
+       - Tabla comparativa de métodos (placeholder para Fase 5).
+       - KPIs de energía y costo.
+       ============================================================ -->
+  <section id="resultados" class="py-20 lg:py-28 bg-surface-950">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.7</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Resultados y Discusión</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <!-- KPIs (cards con métricas principales) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 text-center">
+          <p class="text-energy-400 text-sm font-semibold uppercase tracking-wider mb-2">Energía Total</p>
+          <p id="kpi-energy" class="text-3xl font-black text-white font-mono">— kWh</p>
+          <p id="kpi-energy-sub" class="text-xs text-gray-500 mt-1">E_total = E_TI + E_enf</p>
+        </div>
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 text-center">
+          <p class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-2">Potencia Pico</p>
+          <p id="kpi-peak" class="text-3xl font-black text-white font-mono">— kW</p>
+          <p class="text-xs text-gray-500 mt-1">máx P_total(t)</p>
+        </div>
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 text-center">
+          <p class="text-violet-400 text-sm font-semibold uppercase tracking-wider mb-2">Potencia Media (TVM)</p>
+          <p id="kpi-avg" class="text-3xl font-black text-white font-mono">— kW</p>
+          <p id="kpi-avg-sub" class="text-xs text-gray-500 mt-1">E / (b − a)</p>
+        </div>
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 text-center">
+          <p class="text-amber-400 text-sm font-semibold uppercase tracking-wider mb-2">Costo Estimado</p>
+          <p id="kpi-cost" class="text-3xl font-black text-white font-mono">— COP</p>
+          <p class="text-xs text-gray-500 mt-1">tarifa colombiana</p>
+        </div>
+      </div>
+
+      <!-- KPIs Térmicos y Eficiencia PUE (FASE 2) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+        <div class="bg-surface-800 rounded-2xl p-5 border border-cyan-500/20 text-center">
+          <p class="text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-1">Energía de TI (Servidores)</p>
+          <p id="kpi-energy-ti" class="text-2xl font-black text-white font-mono">— kWh</p>
+          <p class="text-[11px] text-gray-500 mt-1">$\int_a^b P_{\text{TI}}(t)\,dt$</p>
+        </div>
+        <div class="bg-surface-800 rounded-2xl p-5 border border-violet-500/20 text-center">
+          <p class="text-violet-400 text-xs font-semibold uppercase tracking-wider mb-1">Energía de Enfriamiento</p>
+          <p id="kpi-energy-enf" class="text-2xl font-black text-white font-mono">— kWh</p>
+          <p class="text-[11px] text-gray-500 mt-1">$\int_a^b P_{\text{enf}}(t)\,dt$</p>
+        </div>
+        <div class="bg-surface-800 rounded-2xl p-5 border border-energy-500/20 text-center">
+          <p class="text-energy-400 text-xs font-semibold uppercase tracking-wider mb-1">Índice PUE del Centro</p>
+          <p id="kpi-pue" class="text-2xl font-black text-white font-mono">—</p>
+          <p class="text-[11px] text-gray-500 mt-1">$PUE = E_{\text{total}} / E_{\text{TI}}$</p>
+        </div>
+      </div>
+
+      <!-- Comparación: Modelo Analítico vs. Datos Medidos (FASE 1) -->
+      <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden mb-10">
+        <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="font-bold text-white">Validación: Modelo Analítico vs. Datos Medidos</h3>
+            <p class="text-xs text-gray-500">Comparación de la energía integrada sobre las lecturas de telemetría (Trapecio y Simpson) frente al ajuste de $P(t)$.</p>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-semibold">Telemetría vs. Modelo</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 p-6">
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">Modelo (TFC)</p>
+            <p id="comp-energia-modelo" class="text-lg font-bold text-energy-400 font-mono mt-1">—</p>
+          </div>
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">Datos (Trapecio)</p>
+            <p id="comp-energia-trap" class="text-lg font-bold text-amber-300 font-mono mt-1">—</p>
+          </div>
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">Datos (Simpson)</p>
+            <p id="comp-energia-simp" class="text-lg font-bold text-amber-400 font-mono mt-1">—</p>
+          </div>
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">Error Energía</p>
+            <p id="comp-error-energia" class="text-sm font-bold text-pink-400 font-mono mt-1.5">—</p>
+          </div>
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">RMSE / MAE</p>
+            <p class="text-sm font-bold text-cyan-400 font-mono mt-1.5"><span id="comp-rmse">—</span> / <span id="comp-mae">—</span></p>
+          </div>
+          <div class="bg-surface-900/60 rounded-xl p-4 border border-white/5">
+            <p class="text-[11px] text-gray-400 uppercase">Ajuste R²</p>
+            <p id="comp-r2" class="text-lg font-bold text-violet-400 font-mono mt-1">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla comparativa de métodos -->
+      <div class="bg-surface-800 rounded-2xl border border-white/5 overflow-hidden">
+        <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+          <h3 class="font-bold text-white">Comparación de Métodos Numéricos</h3>
+          <span class="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-semibold">Fase 5</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-white/5 text-gray-400">
+                <th class="px-6 py-4 text-left font-semibold">Método</th>
+                <th class="px-6 py-4 text-right font-semibold">Resultado (kWh)</th>
+                <th class="px-6 py-4 text-right font-semibold">Error Absoluto</th>
+                <th class="px-6 py-4 text-right font-semibold">Error %</th>
+                <th class="px-6 py-4 text-right font-semibold">n</th>
+              </tr>
+            </thead>
+            <tbody id="results-table" class="text-gray-300">
+              <tr class="border-b border-white/5">
+                <td class="px-6 py-4 font-medium text-energy-400">TFC — Antiderivada exacta</td>
+                <td class="px-6 py-4 text-right font-mono">Calculando...</td>
+                <td class="px-6 py-4 text-right font-mono text-energy-400">0.0000</td>
+                <td class="px-6 py-4 text-right font-mono text-energy-400">0.000000%</td>
+                <td class="px-6 py-4 text-right font-mono text-gray-500">—</td>
+              </tr>
+              <tr class="border-b border-white/5">
+                <td class="px-6 py-4 font-medium text-sky-400">Riemann Izquierda</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+              </tr>
+              <tr class="border-b border-white/5">
+                <td class="px-6 py-4 font-medium text-sky-300">Riemann Derecha</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+              </tr>
+              <tr class="border-b border-white/5">
+                <td class="px-6 py-4 font-medium text-cyan-400">Riemann Punto Medio</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+              </tr>
+              <tr class="border-b border-white/5">
+                <td class="px-6 py-4 font-medium text-violet-400">Trapecio</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+              </tr>
+              <tr>
+                <td class="px-6 py-4 font-medium text-pink-400">Simpson 1/3</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+                <td class="px-6 py-4 text-right font-mono">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 8: CONCLUSIONES
+       ============================================================
+       Mapeada a: 2.8 Conclusiones y Recomendaciones (APA 7)
+       ============================================================ -->
+  <section id="conclusiones" class="py-20 lg:py-28 bg-surface-900">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.8</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Conclusiones y Recomendaciones</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex gap-4">
+          <span class="text-energy-400 text-xl mt-1">✓</span>
+          <div>
+            <h4 class="font-bold text-white mb-1">Validación del modelo matemático</h4>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se demostró que la integral definida $E = \int_0^{24} P(t)\,dt$ calcula con exactitud
+              la energía acumulada, coincidiendo el resultado analítico (TFC) con las aproximaciones numéricas
+              al incrementar las subdivisiones.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex gap-4">
+          <span class="text-cyan-400 text-xl mt-1">✓</span>
+          <div>
+            <h4 class="font-bold text-white mb-1">Eficacia de los métodos numéricos</h4>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              La regla de Simpson convergió al valor analítico con un error menor al 0.001% usando
+              apenas 100 subdivisiones, superando ampliamente a las sumas de Riemann y la regla del trapecio
+              para el mismo número de particiones.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex gap-4">
+          <span class="text-violet-400 text-xl mt-1">✓</span>
+          <div>
+            <h4 class="font-bold text-white mb-1">Aplicación en ingeniería de sistemas</h4>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              El simulador interactivo permite a un administrador de infraestructura estimar el costo
+              energético en tiempo real, ajustar la carga base del centro de datos y proyectar
+              escenarios de optimización energética.
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-surface-800 rounded-2xl p-6 border border-white/5 flex gap-4">
+          <span class="text-amber-400 text-xl mt-1">→</span>
+          <div>
+            <h4 class="font-bold text-white mb-1">Recomendaciones futuras</h4>
+            <p class="text-gray-400 text-sm leading-relaxed">
+              Se recomienda extender el modelo incorporando variables de temperatura ambiente
+              y eficiencia del sistema de refrigeración (PUE), así como integrar datos reales
+              de servidores mediante APIs de monitoreo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       SECCIÓN 9: REFERENCIAS BIBLIOGRÁFICAS
+       ============================================================
+       Mapeada a: 2.9 Referencias Bibliográficas (APA 7)
+       - Sangría francesa (hanging indent) como pide APA.
+       ============================================================ -->
+  <section id="referencias" class="py-20 lg:py-28 bg-surface-950">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <span class="text-energy-400 text-sm font-semibold tracking-widest uppercase">Sección 2.9</span>
+        <h2 class="text-3xl sm:text-4xl font-bold text-white mt-2">Referencias Bibliográficas</h2>
+        <div class="w-20 h-1 bg-gradient-to-r from-energy-500 to-cyan-500 mx-auto mt-4 rounded-full"></div>
+      </div>
+
+      <div class="bg-surface-800 rounded-2xl p-8 border border-white/5">
+        <div class="space-y-4 text-gray-300 text-sm leading-relaxed" style="text-indent: -1.27cm; padding-left: 1.27cm;">
+          <p>
+            Edwards, B., &amp; Larson, R. (2017). <em>Matemáticas III: Cálculo de varias variables</em>.
+            Cengage Learning.
+          </p>
+          <p>
+            Koomey, J. (2011). <em>Growth in data center electricity use 2005 to 2010</em>. Analytics Press.
+          </p>
+          <p>
+            Stewart, J. (2012). <em>Cálculo de una variable: Trascendentes tempranas</em> (7.ª ed.).
+            Cengage Learning.
+          </p>
+          <p>
+            Thomas, G. B. (2010). <em>Cálculo: Una variable</em> (12.ª ed.). Pearson Educación.
+          </p>
+          <p>
+            U.S. Department of Energy. (2024). <em>Data center energy efficiency best practices</em>.
+            Energy.gov.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="py-8 bg-surface-950 border-t border-white/5">
+    <div class="max-w-6xl mx-auto px-4 text-center">
+      <p class="text-gray-600 text-sm">
+        Universidad Simón Bolívar · Ingeniería de Sistemas · Cálculo Integral · 2026
+      </p>
+      <p class="text-gray-700 text-xs mt-2">
+        Proyecto de Aula — Aplicación de Integrales Definidas e Indefinidas, TFC, Áreas y Volúmenes
+      </p>
+    </div>
+  </footer>
+
+
+  <!-- ============================================================
+       SCRIPTS MODULARES DEL PROYECTO
+       ============================================================
+       1. math-engine.js : Parser math.js, antiderivada analítica TFC,
+                           algoritmos numéricos (Riemann, Trapecio, Simpson)
+                           y cálculo volumétrico del sólido.
+       2. chart-2d.js    : Renderizado bidimensional con Chart.js,
+                           área sombreada continua y rectángulos de Riemann.
+       3. three-3d.js    : Renderizado tridimensional con Three.js,
+                           sólido de revolución, mallas y controles orbitales.
+       4. main.js        : Controlador de interfaz (UI), sliders, presets,
+                           indicadores KPIs y navegación reactiva.
+       ============================================================ -->
+  <script src="js/math-engine.js"></script>
+  <script src="js/chart-2d.js"></script>
+  <script src="js/three-3d.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

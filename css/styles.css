@@ -1,0 +1,158 @@
+/**
+ * ==============================================================================
+ * PROYECTO DE AULA: CÁLCULO INTEGRAL - UNIVERSIDAD SIMÓN BOLÍVAR
+ * ARCHIVO: css/styles.css
+ * DESCRIPCIÓN: Estilos personalizados y utilidades de interfaz (UI/UX).
+ * Complementa a Tailwind CSS para efectos de brillo (glow), scrollbar,
+ * animaciones fluidas y visualización de fórmulas matemáticas con KaTeX.
+ * ==============================================================================
+ */
+
+/* ==========================================================================
+   1. VARIABLES GLOBALES Y CONFIGURACIÓN DE TEMA
+   ========================================================================== */
+:root {
+  --color-energy-primary: #10b981;   /* Esmeralda energético */
+  --color-energy-glow: rgba(16, 185, 129, 0.18);
+  --color-cyan-accent: #06b6d4;      /* Acento cian */
+  --color-bg-base: #0a0a14;          /* Fondo oscuro profundo */
+  --color-surface-card: #1e1e2e;     /* Superficie de tarjetas */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   2. SCROLLBAR PERSONALIZADA (DARK THEME)
+   ========================================================================== */
+/* Ancho de barra de desplazamiento en navegadores WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Pista de la barra de desplazamiento (fondo) */
+::-webkit-scrollbar-track {
+  background: #11111b;
+}
+
+/* Puntero/Thumb interactivo con esquinas redondeadas */
+::-webkit-scrollbar-thumb {
+  background: #059669;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+/* Efecto al pasar el cursor sobre la barra */
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* ==========================================================================
+   3. EFECTOS VISUALES Y FONDOS DEGRADADOS
+   ========================================================================== */
+/**
+ * .hero-glow:
+ * Genera un halo de luz radial centrado en el hero para dar la sensación
+ * de potencia/energía activa de un centro de datos.
+ */
+.hero-glow {
+  background: radial-gradient(
+    ellipse 650px 320px at 50% 50%,
+    rgba(16, 185, 129, 0.16),
+    rgba(6, 182, 212, 0.08),
+    transparent 70%
+  );
+}
+
+/**
+ * .server-grid-pattern:
+ * Simulación de cuadrícula de arquitectura de servidores y racks.
+ */
+.server-grid-pattern {
+  background-image: 
+    repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(52, 211, 153, 0.05) 49px, rgba(52, 211, 153, 0.05) 50px),
+    repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(52, 211, 153, 0.05) 49px, rgba(52, 211, 153, 0.05) 50px);
+}
+
+/* ==========================================================================
+   4. NAVEGACIÓN Y COMPORTAMIENTO DE SECCIONES
+   ========================================================================== */
+/* Margen de desplazamiento para que los encabezados no queden tapados por el navbar fijo */
+section {
+  scroll-margin-top: 80px;
+}
+
+/* Enlaces del Navbar: indicador inferior activo */
+.nav-link {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.nav-link.active {
+  color: #34d399 !important;
+  border-bottom-color: #34d399 !important;
+}
+
+/* Efecto de desenfoque y borde traslúcido para barra de navegación */
+.glass-nav {
+  background: rgba(17, 17, 27, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* ==========================================================================
+   5. ANIMACIONES SUAVES DE ENTRADA (INTERSECTION OBSERVER)
+   ========================================================================== */
+.card-fade {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.card-fade.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   6. CONTROLES Y SLIDERS PERSONALIZADOS
+   ========================================================================== */
+input[type="range"] {
+  background: #1e1e2e;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* ==========================================================================
+   7. FORMATO APA 7 PARA CITAS Y REFERENCIAS
+   ========================================================================== */
+/**
+ * Sangría francesa estandarizada por APA 7 (0.5 pulgadas = 1.27 cm).
+ * La primera línea inicia en el margen normal y las siguientes se sangran.
+ */
+.apa-hanging-indent {
+  text-indent: -1.27cm;
+  padding-left: 1.27cm;
+}
+
+/* ==========================================================================
+   8. ADAPTACIONES PARA KaTeX EN MODO OSCURO
+   ========================================================================== */
+.katex-display {
+  margin: 0.8em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2em 0;
+}
+
+.katex {
+  font-size: 1.05em !important;
+  color: #f3f4f6;
+}
